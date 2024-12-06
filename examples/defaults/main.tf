@@ -1,14 +1,49 @@
+resource "azuread_application" "this" {
+   display_name = "demo" 
+}
+
+resource "azuread_service_principal" "this" {
+    client_id = azuread_application.this.client_id
+}
+
+resource "azuread_group" "contrib" {
+    display_name = "contrib"
+    security_enabled = true
+}
+
+resource "azuread_group" "reader" {
+    display_name = "reader"
+    security_enabled = true
+}
+
+resource "azuread_group" "owner" {
+    display_name = "reader"
+    security_enabled = true
+}
+
+
+resource "azurerm_resource_group" "this" {
+    name = "rg-acr-extension"
+    location = "westeurope"
+}
+
+resource "azurerm_container_registry" "this" {
+    name = "acrextensiondemo"
+    location = azurerm_resource_group.this.location
+    resource_group_name = azurerm_resource_group.this.name
+    sku = "Basic"
+}
 
 module "defaults" {
    source = "../../src" 
 
    # Spoke group ids
-   service_principal_object_id = "1cb8e956-959b-44fe-b293-d34d555701f3"
-   owner_group_id = "b55d99c9-4131-4409-b8cc-647a1e763dae"
-   contributor_group_id = "b55d99c9-4131-4409-b8cc-647a1e763dae"
-   reader_group_id = "b55d99c9-4131-4409-b8cc-647a1e763dae"
+   service_principal_object_id = azuread_service_principal.this.object_id
+   owner_group_id = azuread_group.owner.object_id 
+   contributor_group_id = azuread_group.contrib.object_id
+   reader_group_id = azuread_group.reader.object_id
 
    # Acr access config
-   acr_resource_id = "/subscriptions/cbafd01c-a328-4557-a994-f3179498af36/resourceGroups/rg-joey-166/providers/Microsoft.ContainerRegistry/registries/acrjoey166"
+   acr_resource_id = azurerm_container_registry.this.id
    acr_group_name = "demospoke-acrpull"
 }
